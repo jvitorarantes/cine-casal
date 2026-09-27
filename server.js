@@ -31,7 +31,18 @@ function cleanName(name) {
   return String(name || '').trim().slice(0, 30);
 }
 
-// Converte links de compartilhamento do Google Drive e Dropbox em links diretos de vídeo.
+// Aceita youtube.com/watch?v=, youtu.be/, /shorts/, /embed/ e /live/.
+function youtubeVideoId(url, host) {
+  let id = null;
+  if (host === 'youtu.be') id = url.pathname.split('/')[1];
+  else if (/(^|\.)youtube(-nocookie)?\.com$/.test(host)) {
+    id = url.searchParams.get('v') || (url.pathname.match(/^\/(?:shorts|embed|live|v)\/([^/?#]+)/) || [])[1];
+  }
+  return id && /^[\w-]{6,20}$/.test(id) ? id : null;
+}
+
+// Converte links de compartilhamento do Google Drive e Dropbox em links diretos de vídeo
+// e links do YouTube em um formato único que o navegador reconhece.
 function toDirectVideoUrl(raw) {
   let url;
   try {
@@ -42,6 +53,9 @@ function toDirectVideoUrl(raw) {
   if (!/^https?:$/.test(url.protocol)) return null;
 
   const host = url.hostname.toLowerCase();
+
+  const youtubeId = youtubeVideoId(url, host);
+  if (youtubeId) return `https://www.youtube.com/watch?v=${youtubeId}`;
 
   if (host.endsWith('drive.google.com') || host.endsWith('docs.google.com')) {
     const match = url.pathname.match(/\/file\/d\/([^/]+)/);

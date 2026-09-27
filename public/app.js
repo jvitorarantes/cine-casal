@@ -8,6 +8,8 @@
 
   let me = { name: '', isHost: false, code: '' };
   let heartbeat = null;
+  let player = null;
+  let currentUrl = '';
   let expected = { playing: false, time: 0, at: Date.now() };
 
   // ---------- Fundo com corações ----------
@@ -97,63 +99,94 @@
     $('role-badge').textContent = me.isHost ? '🎬 Você controla o filme' : '🍿 Assistindo junto';
     $('host-tools').classList.toggle('hidden', !me.isHost);
     $('guest-controls').classList.toggle('hidden', me.isHost);
-    video.controls = me.isHost;
     if (me.isHost) $('waiting').classList.add('hidden');
+    // O player do YouTube precisa ser recriado para ligar/desligar os controles.
+    if (player && !player.setControls(me.isHost)) loadVideo(currentUrl, { playing: expected.playing, time: expectedTime() });
     updateGuestUi();
   }
 
   function loadVideo(url, state) {
     $('video-error').classList.add('hidden');
     expected = { playing: !!(state && state.playing), time: (state && state.time) || 0, at: Date.now() };
-    video.src = url;
-    video.load();
-    video.addEventListener('loadedmetadata', () => {
-      video.currentTime = expectedTime();
-      if (!me.isHost) applyExpected();
-    }, { once: true });
+    if (player) player.destroy();
+    currentUrl = url;
+    player = CinePlayers.create(url, {
+      video,
+      ytBox: $('yt-box'),
+      hostMode: me.isHost,
+      events: {
+        ready: onPlayerReady,
+        play: onPlayerPlay,
+        pause: onPlayerPause,
+        seek: () => { if (me.isHost) sendControl('seek'); },
+        error: showVideoError,
+      },
+    });
+    player.setControls(me.isHost);
     updateGuestUi();
   }
 
-  video.addEventListener('error', () => {
-    if (!video.getAttribute('src')) return;
-    const code = video.error && video.error.code;
-    const messages = {
+  function onPlayerReady() {
+    if (Math.abs(player.time() - expectedTime()) > 1) player.seek(expectedTime());
+    if (!me.isHost) applyExpected();
+  }
+
+  const ERRORS = {
+    file: {
       3: ['💔 O link funciona, mas o navegador não sabe tocar esse arquivo.',
-        'O vídeo ou o áudio usa um formato não suportado (ex.: HEVC/H.265 10-bit, áudio AC3/DTS). Converta para .mp4 com vídeo H.264 e áudio AAC (o HandBrake faz isso de graça) e tente de novo.'],
+        'O vídeo ou o áudio usa um formato não suportado (ex.: .mov do iPhone em HEVC, áudio AC3/DTS). Jeito mais prático: suba o vídeo no YouTube como "Não listado" e cole o link aqui — o YouTube aceita qualquer formato.'],
       4: ['💔 Esse arquivo não pode ser tocado no navegador.',
-        'Pode ser que o link não seja público ou que o formato não seja suportado (ex.: .mkv, .avi ou vídeo em HEVC/H.265). Converta para .mp4 (H.264) e tente de novo.'],
-    };
-    const [title, detail] = messages[code] || ['💔 Não consegui carregar esse vídeo.',
-      'Confira se o link está público. Vídeos muito grandes do Google Drive às vezes são bloqueados — o Dropbox costuma funcionar melhor.'];
+        'Pode ser que o link não seja público ou que o formato não seja suportado (ex.: .mkv, .avi, .mov em HEVC). Jeito mais prático: suba o vídeo no YouTube como "Não listado" e cole o link aqui.'],
+      default: ['💔 Não consegui carregar esse vídeo.',
+        'Confira se o link está público. Vídeos muito grandes do Google Drive às vezes são bloqueados — o Dropbox ou o YouTube costumam funcionar melhor.'],
+    },
+    youtube: {
+      2: ['💔 Esse link do YouTube não parece válido.', 'Copie o link de novo pelo botão Compartilhar do YouTube.'],
+      100: ['💔 O YouTube não encontrou esse vídeo.', 'Ele pode ter sido apagado ou estar como "Privado". Deixe o vídeo como "Não listado" para funcionar aqui.'],
+      101: ['💔 O YouTube não deixa esse vídeo tocar fora do site dele.', 'Isso acontece com vídeos com direitos autorais ou com a opção "Permitir incorporação" desligada. Vídeos que você mesmo subiu funcionam.'],
+      150: ['💔 O YouTube não deixa esse vídeo tocar fora do site dele.', 'Isso acontece com vídeos com direitos autorais ou com a opção "Permitir incorporação" desligada. Vídeos que você mesmo subiu funcionam.'],
+      api: ['💔 Não consegui abrir o player do YouTube.', 'Confira sua internet e recarregue a página.'],
+      default: ['💔 O YouTube não conseguiu tocar esse vídeo.', 'Tente recarregar a página. Se o vídeo acabou de ser enviado, espere o YouTube terminar de processar.'],
+    },
+  };
+
+  function showVideoError(info) {
+    const table = ERRORS[info.source];
+    const [title, detail] = table[info.code] || table.default;
     $('video-error-title').textContent = title;
     $('video-error-detail').textContent = detail;
-    $('video-error-link').href = video.currentSrc || video.getAttribute('src');
-    $('video-error-code').textContent = 'Código do erro: ' + (code || '?') + (video.error && video.error.message ? ' — ' + video.error.message : '');
+    $('video-error-link').href = info.link;
+    $('video-error-code').textContent = 'Código do erro: ' + (info.code || '?') + (info.message ? ' — ' + info.message : '');
     $('waiting').classList.add('hidden');
     $('video-error').classList.remove('hidden');
-  });
+  }
 
   // ---------- Quem criou a sala (host) ----------
   function sendControl(action) {
-    if (!me.isHost) return;
-    socket.emit('control', { action, time: video.currentTime });
+    if (!me.isHost || !player) return;
+    socket.emit('control', { action, time: player.time() });
   }
 
-  video.addEventListener('play', () => {
-    if (!me.isHost) return;
-    sendControl('play');
-    clearInterval(heartbeat);
-    heartbeat = setInterval(() => sendControl('tick'), HEARTBEAT_MS);
-  });
-  video.addEventListener('pause', () => {
-    if (!me.isHost) return;
-    clearInterval(heartbeat);
-    // O navegador também dispara "pause" no fim do vídeo; tudo bem, mantém todos no mesmo ponto.
-    sendControl('pause');
-  });
-  video.addEventListener('seeked', () => {
-    if (me.isHost) sendControl('seek');
-  });
+  function onPlayerPlay() {
+    if (me.isHost) {
+      sendControl('play');
+      clearInterval(heartbeat);
+      heartbeat = setInterval(() => sendControl('tick'), HEARTBEAT_MS);
+    }
+    updateGuestUi();
+  }
+
+  function onPlayerPause(ended) {
+    if (me.isHost) {
+      clearInterval(heartbeat);
+      // Também acontece no fim do vídeo; tudo bem, mantém todos no mesmo ponto.
+      sendControl('pause');
+    } else if (expected.playing && !ended) {
+      // Convidado não controla: se o vídeo parar sozinho, volta ao estado da sala.
+      setTimeout(() => applyExpected(), 300);
+    }
+    updateGuestUi();
+  }
 
   $('change-video-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -169,46 +202,44 @@
   // ---------- Quem assiste (convidado) ----------
   socket.on('sync', (msg) => {
     expected = { playing: msg.playing, time: msg.time, at: Date.now() };
-    if (me.isHost) {
-      // Só acontece se o servidor pausar a sala; o host continua mandando.
-      return;
-    }
+    // O host só recebe isso se o servidor pausar a sala; ele continua no controle.
+    if (me.isHost) return;
     applyExpected(msg.action !== 'tick');
   });
 
-  async function applyExpected(forceSeek) {
-    if (me.isHost || video.readyState < 1) return updateGuestUi();
+  async function applyExpected(forceSeek, muteFallback) {
+    if (me.isHost || !player || !player.ready()) return updateGuestUi();
     const target = expectedTime();
-    if (forceSeek || Math.abs(video.currentTime - target) > DRIFT_TOLERANCE) {
-      video.currentTime = target;
-    }
-    if (expected.playing && video.paused) {
+    if (forceSeek || Math.abs(player.time() - target) > DRIFT_TOLERANCE) player.seek(target);
+    if (expected.playing && player.paused()) {
       try {
-        await video.play();
+        await player.play();
         $('unlock').classList.add('hidden');
       } catch (err) {
-        if (err && err.name === 'NotAllowedError') $('unlock').classList.remove('hidden');
+        if (!err || err.name !== 'NotAllowedError') return;
+        if (!muteFallback) return $('unlock').classList.remove('hidden');
+        // Alguns celulares só deixam começar sem som; o som volta pelo botão 🔇.
+        setMuted(true);
+        $('unlock').classList.add('hidden');
+        toast('Toque em 🔇 para ligar o som');
+        player.play().catch(() => {});
       }
-    } else if (!expected.playing && !video.paused) {
-      video.pause();
+    } else if (!expected.playing && !player.paused()) {
+      player.pause();
     }
     updateGuestUi();
   }
 
   $('unlock-btn').addEventListener('click', () => {
     $('unlock').classList.add('hidden');
-    applyExpected(true);
+    applyExpected(true, true);
   });
 
-  // Convidado não controla: se o vídeo pausar/tocar sozinho (ex.: teclado, fim de buffer), volta ao estado da sala.
-  video.addEventListener('pause', () => {
-    if (!me.isHost && expected.playing && !video.ended) setTimeout(() => applyExpected(), 300);
-    updateGuestUi();
-  });
-  video.addEventListener('play', updateGuestUi);
-  video.addEventListener('timeupdate', () => {
-    if (!me.isHost) $('guest-time').textContent = `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
-  });
+  setInterval(() => {
+    if (!me.isHost && player && player.ready()) {
+      $('guest-time').textContent = `${fmt(player.time())} / ${fmt(player.duration())}`;
+    }
+  }, 500);
 
   function updateGuestUi() {
     if (me.isHost) return;
@@ -217,20 +248,23 @@
     $('waiting').classList.toggle('hidden', errored || expected.playing || expectedTime() > 0.5);
   }
 
-  $('mute-btn').addEventListener('click', () => {
-    video.muted = !video.muted;
-    $('mute-btn').textContent = video.muted ? '🔇' : '🔊';
-  });
+  let muted = false;
+  function setMuted(m) {
+    muted = m;
+    if (player) player.setMuted(m);
+    $('mute-btn').textContent = m ? '🔇' : '🔊';
+  }
+  $('mute-btn').addEventListener('click', () => setMuted(!muted));
   $('volume').addEventListener('input', (e) => {
-    video.volume = Number(e.target.value);
-    video.muted = video.volume === 0;
-    $('mute-btn').textContent = video.muted ? '🔇' : '🔊';
+    const v = Number(e.target.value);
+    if (player) player.setVolume(v);
+    setMuted(v === 0);
   });
   $('fs-btn').addEventListener('click', () => {
     const wrap = $('player-wrap');
     if (document.fullscreenElement) document.exitFullscreen();
     else if (wrap.requestFullscreen) wrap.requestFullscreen();
-    else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    else if (video.webkitEnterFullscreen && !video.classList.contains('hidden')) video.webkitEnterFullscreen();
   });
 
   // ---------- Troca de vídeo, membros, conexão ----------
@@ -265,7 +299,7 @@
       applyRole();
       renderMembers(res.room.members);
       expected = { playing: res.room.state.playing, time: res.room.state.time, at: Date.now() };
-      if (me.isHost) sendControl(video.paused ? 'pause' : 'play');
+      if (me.isHost) sendControl(player && !player.paused() ? 'play' : 'pause');
       else applyExpected(true);
       toast('De volta à sala ♥');
     });

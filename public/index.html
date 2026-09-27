@@ -34,7 +34,7 @@
         </label>
         <label>
           <span>Link do vídeo <small>(só para quem cria a sala)</small></span>
-          <input id="video" name="video" type="url" placeholder="Cole o link do Google Drive ou Dropbox">
+          <input id="video" name="video" type="url" placeholder="Cole o link do YouTube, Dropbox ou Google Drive">
         </label>
         <p class="hint">Se a sala ainda não existir, ela será criada com o seu vídeo e você fica com o controle 🎬</p>
         <p id="join-error" class="error" role="alert"></p>
@@ -44,9 +44,10 @@
       <details class="help">
         <summary>Como preparar o link?</summary>
         <ul>
+          <li><b>YouTube (mais prático):</b> suba o vídeo pelo app do YouTube como <i>Não listado</i> e copie o link. Aceita qualquer formato, inclusive .mov do iPhone.</li>
           <li><b>Google Drive:</b> clique em <i>Compartilhar</i> → <i>Qualquer pessoa com o link</i> e copie o link.</li>
           <li><b>Dropbox:</b> clique em <i>Compartilhar</i> → <i>Copiar link</i>.</li>
-          <li>Prefira vídeos em <b>.mp4</b> — são os que funcionam em todos os navegadores.</li>
+          <li>No Drive e no Dropbox, prefira vídeos em <b>.mp4</b> — são os que funcionam em todos os navegadores.</li>
         </ul>
       </details>
     </div>
@@ -66,6 +67,7 @@
       <section class="stage">
         <div id="player-wrap" class="player-wrap">
           <video id="video-el" playsinline preload="auto"></video>
+          <div id="yt-box" class="yt-box hidden"></div>
           <div id="hearts-layer" class="hearts-layer" aria-hidden="true"></div>
 
           <div id="unlock" class="overlay hidden">
@@ -121,6 +123,7 @@
   <div id="toast" class="toast"></div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="players.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

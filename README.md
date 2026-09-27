@@ -1,6 +1,6 @@
 # Cine Casal 💕
 
-Um cineminha para casais: cole o link de um vídeo do **Google Drive** ou **Dropbox**, escolha um código de sala e assistam juntinhos, em sincronia, mesmo de longe.
+Um cineminha para casais: cole o link de um vídeo do **YouTube**, **Google Drive** ou **Dropbox**, escolha um código de sala e assistam juntinhos, em sincronia, mesmo de longe.
 
 ## Como funciona
 
@@ -23,8 +23,9 @@ A porta pode ser alterada com a variável `PORT`. Para usar a dois em lugares di
 
 ## Sobre os links de vídeo
 
+- **YouTube (mais prático):** suba o vídeo como *Não listado* (não *Privado*). O YouTube aceita qualquer formato — inclusive .mov do iPhone em HEVC — e converte sozinho. Vídeos com direitos autorais ou com a incorporação desativada não tocam fora do YouTube.
 - **Google Drive:** compartilhe como *Qualquer pessoa com o link*. Arquivos muito grandes podem ser bloqueados pelo Drive por limite de download.
 - **Dropbox:** use o link de compartilhamento normal; ele é convertido automaticamente para `raw=1`.
 - Prefira **.mp4 (H.264/AAC)**, que toca em todos os navegadores. Outros links diretos para arquivos de vídeo também funcionam.
 
-O vídeo é carregado diretamente do Drive/Dropbox pelo navegador de cada pessoa; o servidor só troca as mensagens de sincronização.
+O vídeo é carregado diretamente do YouTube/Drive/Dropbox pelo navegador de cada pessoa; o servidor só troca as mensagens de sincronização.
