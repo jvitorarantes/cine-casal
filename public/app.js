@@ -117,12 +117,16 @@
   video.addEventListener('error', () => {
     if (!video.getAttribute('src')) return;
     const code = video.error && video.error.code;
-    $('video-error-title').textContent = code === 4
-      ? '💔 Esse arquivo não pode ser tocado no navegador.'
-      : '💔 Não consegui carregar esse vídeo.';
-    $('video-error-detail').textContent = code === 4
-      ? 'Pode ser que o link não seja público ou que o formato não seja suportado (ex.: .mkv, .avi ou vídeo em HEVC/H.265). Converta para .mp4 (H.264) e tente de novo.'
-      : 'Confira se o link está público. Vídeos muito grandes do Google Drive às vezes são bloqueados — o Dropbox costuma funcionar melhor.';
+    const messages = {
+      3: ['💔 O link funciona, mas o navegador não sabe tocar esse arquivo.',
+        'O vídeo ou o áudio usa um formato não suportado (ex.: HEVC/H.265 10-bit, áudio AC3/DTS). Converta para .mp4 com vídeo H.264 e áudio AAC (o HandBrake faz isso de graça) e tente de novo.'],
+      4: ['💔 Esse arquivo não pode ser tocado no navegador.',
+        'Pode ser que o link não seja público ou que o formato não seja suportado (ex.: .mkv, .avi ou vídeo em HEVC/H.265). Converta para .mp4 (H.264) e tente de novo.'],
+    };
+    const [title, detail] = messages[code] || ['💔 Não consegui carregar esse vídeo.',
+      'Confira se o link está público. Vídeos muito grandes do Google Drive às vezes são bloqueados — o Dropbox costuma funcionar melhor.'];
+    $('video-error-title').textContent = title;
+    $('video-error-detail').textContent = detail;
     $('video-error-link').href = video.currentSrc || video.getAttribute('src');
     $('video-error-code').textContent = 'Código do erro: ' + (code || '?') + (video.error && video.error.message ? ' — ' + video.error.message : '');
     $('waiting').classList.add('hidden');
