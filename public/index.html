@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cine Casal 💕</title>
+  <meta name="theme-color" content="#2a0f1f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💞</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="petals" aria-hidden="true"></div>
+
+  <!-- Tela de entrada -->
+  <main id="join-screen" class="screen">
+    <div class="card">
+      <div class="logo">
+        <span class="logo-heart">♥</span>
+        <h1>Cine Casal</h1>
+        <p class="tagline">o nosso cineminha, mesmo de longe</p>
+      </div>
+
+      <form id="join-form" autocomplete="off">
+        <label>
+          <span>Seu nome</span>
+          <input id="name" name="name" maxlength="30" placeholder="Ex.: Amor" required>
+        </label>
+        <label>
+          <span>Código da sala</span>
+          <input id="code" name="code" maxlength="20" placeholder="Ex.: NOSSOFILME" required>
+        </label>
+        <label>
+          <span>Link do vídeo <small>(só para quem cria a sala)</small></span>
+          <input id="video" name="video" type="url" placeholder="Cole o link do Google Drive ou Dropbox">
+        </label>
+        <p class="hint">Se a sala ainda não existir, ela será criada com o seu vídeo e você fica com o controle 🎬</p>
+        <p id="join-error" class="error" role="alert"></p>
+        <button type="submit" class="btn-primary">Entrar na sala <span>♥</span></button>
+      </form>
+
+      <details class="help">
+        <summary>Como preparar o link?</summary>
+        <ul>
+          <li><b>Google Drive:</b> clique em <i>Compartilhar</i> → <i>Qualquer pessoa com o link</i> e copie o link.</li>
+          <li><b>Dropbox:</b> clique em <i>Compartilhar</i> → <i>Copiar link</i>.</li>
+          <li>Prefira vídeos em <b>.mp4</b> — são os que funcionam em todos os navegadores.</li>
+        </ul>
+      </details>
+    </div>
+  </main>
+
+  <!-- Sala -->
+  <main id="room-screen" class="screen hidden">
+    <header class="room-header">
+      <div class="brand"><span class="logo-heart small">♥</span> Cine Casal</div>
+      <div class="room-info">
+        <button id="copy-code" class="chip" title="Copiar código da sala">Sala <b id="room-code"></b> ⧉</button>
+        <span id="role-badge" class="chip role"></span>
+      </div>
+    </header>
+
+    <div class="room-layout">
+      <section class="stage">
+        <div id="player-wrap" class="player-wrap">
+          <video id="video-el" playsinline preload="auto"></video>
+          <div id="hearts-layer" class="hearts-layer" aria-hidden="true"></div>
+
+          <div id="unlock" class="overlay hidden">
+            <button id="unlock-btn" class="btn-primary">Toque para assistir juntinhos ♥</button>
+          </div>
+          <div id="video-error" class="overlay hidden">
+            <div class="overlay-msg">
+              <p>💔 Não consegui carregar esse vídeo.</p>
+              <small>Confira se o link está público e se o arquivo é .mp4. Vídeos muito grandes do Google Drive às vezes são bloqueados — o Dropbox costuma funcionar melhor.</small>
+            </div>
+          </div>
+          <div id="waiting" class="overlay soft hidden">
+            <p class="overlay-msg">Esperando <span id="host-name">quem criou a sala</span> dar o play... 🍿</p>
+          </div>
+        </div>
+
+        <div id="guest-controls" class="guest-controls hidden">
+          <span class="status" id="guest-status">⏸ Pausado</span>
+          <span class="time" id="guest-time">0:00</span>
+          <div class="spacer"></div>
+          <button id="mute-btn" class="icon-btn" title="Som">🔊</button>
+          <input id="volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+          <button id="fs-btn" class="icon-btn" title="Tela cheia">⛶</button>
+        </div>
+
+        <div id="host-tools" class="host-tools hidden">
+          <form id="change-video-form">
+            <input id="new-video" type="url" placeholder="Trocar o vídeo: cole outro link">
+            <button type="submit" class="btn-ghost">Trocar</button>
+          </form>
+        </div>
+
+        <div class="members">
+          <span>Na sala:</span>
+          <ul id="member-list"></ul>
+        </div>
+      </section>
+
+      <aside class="chat">
+        <h2>Cartinhas 💌</h2>
+        <ul id="messages" class="messages"></ul>
+        <form id="chat-form" class="chat-form" autocomplete="off">
+          <button type="button" id="heart-btn" class="icon-btn heart-btn" title="Mandar um coração">❤️</button>
+          <input id="chat-input" maxlength="500" placeholder="Escreva algo fofo...">
+          <button type="submit" class="btn-primary small">Enviar</button>
+        </form>
+      </aside>
+    </div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

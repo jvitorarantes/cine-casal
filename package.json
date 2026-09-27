@@ -1,0 +1,27 @@
+{
+  "name": "cine-casal",
+  "version": "1.0.0",
+  "description": "Assista vídeos juntinhos, em sincronia, com quem você ama",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jvitorarantes/cine-casal.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jvitorarantes/cine-casal/issues"
+  },
+  "homepage": "https://github.com/jvitorarantes/cine-casal#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}
