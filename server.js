@@ -49,10 +49,12 @@ function toDirectVideoUrl(raw) {
     if (id) return `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&confirm=t`;
   }
 
-  if (host.endsWith('dropbox.com')) {
-    url.searchParams.delete('dl');
-    url.searchParams.set('raw', '1');
-    return url.toString();
+  if (host === 'dropbox.com' || host === 'www.dropbox.com') {
+    // dl.dropboxusercontent.com entrega o arquivo direto, sem redirecionamento, e aceita avançar/voltar.
+    const direct = new URL(url.pathname, 'https://dl.dropboxusercontent.com');
+    const rlkey = url.searchParams.get('rlkey');
+    if (rlkey) direct.searchParams.set('rlkey', rlkey);
+    return direct.toString();
   }
 
   return url.toString();
@@ -109,10 +111,15 @@ io.on('connection', (socket) => {
       };
       rooms.set(code, room);
       isHost = true;
-    } else if (payload && payload.hostToken && payload.hostToken === room.hostToken && !room.hostSocketId) {
-      // O criador voltou para a sala (recarregou a página, por exemplo).
+    } else if (payload && payload.hostToken && payload.hostToken === room.hostToken) {
+      // O criador voltou para a sala (recarregou a página ou a conexão caiu no celular).
+      // A conexão antiga pode ainda não ter sido detectada como morta, então ela é substituída.
       isHost = true;
       hostToken = room.hostToken;
+      const old = room.hostSocketId && room.hostSocketId !== socket.id && io.sockets.sockets.get(room.hostSocketId);
+      if (room.hostSocketId) room.members.delete(room.hostSocketId);
+      room.hostSocketId = null;
+      if (old) old.disconnect(true);
     }
 
     if (isHost) room.hostSocketId = socket.id;

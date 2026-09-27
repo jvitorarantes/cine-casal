@@ -86,14 +86,20 @@
     $('join-screen').classList.add('hidden');
     $('room-screen').classList.remove('hidden');
     $('room-code').textContent = me.code;
-    $('role-badge').textContent = me.isHost ? '🎬 Você controla o filme' : '🍿 Assistindo junto';
-    $('host-tools').classList.toggle('hidden', !me.isHost);
-    $('guest-controls').classList.toggle('hidden', me.isHost);
-    video.controls = me.isHost;
+    applyRole();
 
     renderMembers(res.room.members);
     addSystem(me.isHost ? 'Sala criada! Mande o código para o seu amor 💌' : `Você entrou na sala ${me.code} 💞`);
     loadVideo(res.room.videoUrl, res.room.state);
+  }
+
+  function applyRole() {
+    $('role-badge').textContent = me.isHost ? '🎬 Você controla o filme' : '🍿 Assistindo junto';
+    $('host-tools').classList.toggle('hidden', !me.isHost);
+    $('guest-controls').classList.toggle('hidden', me.isHost);
+    video.controls = me.isHost;
+    if (me.isHost) $('waiting').classList.add('hidden');
+    updateGuestUi();
   }
 
   function loadVideo(url, state) {
@@ -109,7 +115,16 @@
   }
 
   video.addEventListener('error', () => {
-    if (video.getAttribute('src')) $('video-error').classList.remove('hidden');
+    if (!video.getAttribute('src')) return;
+    const code = video.error && video.error.code;
+    $('video-error-title').textContent = code === 4
+      ? '💔 Esse arquivo não pode ser tocado no navegador.'
+      : '💔 Não consegui carregar esse vídeo.';
+    $('video-error-detail').textContent = code === 4
+      ? 'Pode ser que o link não seja público ou que o formato não seja suportado (ex.: .mkv, .avi ou vídeo em HEVC/H.265). Converta para .mp4 (H.264) e tente de novo.'
+      : 'Confira se o link está público. Vídeos muito grandes do Google Drive às vezes são bloqueados — o Dropbox costuma funcionar melhor.';
+    $('waiting').classList.add('hidden');
+    $('video-error').classList.remove('hidden');
   });
 
   // ---------- Quem criou a sala (host) ----------
@@ -192,7 +207,8 @@
   function updateGuestUi() {
     if (me.isHost) return;
     $('guest-status').textContent = expected.playing ? '▶ Tocando' : '⏸ Pausado';
-    $('waiting').classList.toggle('hidden', expected.playing || expectedTime() > 0.5);
+    const errored = !$('video-error').classList.contains('hidden');
+    $('waiting').classList.toggle('hidden', errored || expected.playing || expectedTime() > 0.5);
   }
 
   $('mute-btn').addEventListener('click', () => {
@@ -240,6 +256,7 @@
     socket.emit('join', { name: me.name, code: me.code, hostToken: store.get('cine-host-' + me.code) }, (res) => {
       if (!res || res.error) return toast((res && res.error) || 'Não foi possível voltar à sala.');
       me.isHost = res.isHost;
+      applyRole();
       renderMembers(res.room.members);
       expected = { playing: res.room.state.playing, time: res.room.state.time, at: Date.now() };
       if (me.isHost) sendControl(video.paused ? 'pause' : 'play');
