@@ -123,6 +123,8 @@
     $('video-error-detail').textContent = code === 4
       ? 'Pode ser que o link não seja público ou que o formato não seja suportado (ex.: .mkv, .avi ou vídeo em HEVC/H.265). Converta para .mp4 (H.264) e tente de novo.'
       : 'Confira se o link está público. Vídeos muito grandes do Google Drive às vezes são bloqueados — o Dropbox costuma funcionar melhor.';
+    $('video-error-link').href = video.currentSrc || video.getAttribute('src');
+    $('video-error-code').textContent = 'Código do erro: ' + (code || '?') + (video.error && video.error.message ? ' — ' + video.error.message : '');
     $('waiting').classList.add('hidden');
     $('video-error').classList.remove('hidden');
   });

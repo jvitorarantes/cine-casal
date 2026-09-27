@@ -51,9 +51,9 @@ function toDirectVideoUrl(raw) {
 
   if (host === 'dropbox.com' || host === 'www.dropbox.com') {
     // dl.dropboxusercontent.com entrega o arquivo direto, sem redirecionamento, e aceita avançar/voltar.
-    const direct = new URL(url.pathname, 'https://dl.dropboxusercontent.com');
-    const rlkey = url.searchParams.get('rlkey');
-    if (rlkey) direct.searchParams.set('rlkey', rlkey);
+    // Mantém rlkey/st (necessários nos links novos) e remove só o dl=0.
+    const direct = new URL(url.pathname + url.search, 'https://dl.dropboxusercontent.com');
+    direct.searchParams.delete('dl');
     return direct.toString();
   }
 
